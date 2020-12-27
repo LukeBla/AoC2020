@@ -1,0 +1,143 @@
+'''
+Created on 23 Dec 2020
+
+@author: Luke
+'''
+
+
+from AOC.config import config
+config.set_wd(23)
+
+import numpy as np
+
+class Cup(object):
+    def __init__(self, _id, debug):
+        self.id = _id
+        Cups._cups_dict[_id] = self
+        self.next_cup = None
+        self.debug = debug
+        
+    def set_next(self, cup):
+        self.next_cup = cup
+        
+    def remove_next(self):
+        self.next_cup = None
+        
+    def get_next(self):
+        return self.next_cup
+        
+    def __str__(self):
+        return str(self.id)
+
+class Cups(object):
+    _cups_dict = {}
+    def __init__(self, original_cups, num_cups, debug=False):
+        self.first_cup = Cup(original_cups[0], debug)
+        self.first_cup.first_cup = self.first_cup
+        self.debug = debug
+        self.num_cups = num_cups
+        current_cup = self.first_cup
+        print("Initialising cup space")
+        for c in original_cups[1:]:
+            cup = Cup(c, debug)
+            current_cup.set_next(cup)
+            current_cup = cup
+        if not len(original_cups) == num_cups:
+            for c in range(1+max(original_cups), num_cups+1):
+                cup = Cup(c, debug)
+                current_cup.set_next(cup)
+                current_cup = cup
+        current_cup.set_next(self.first_cup)
+        self.current_cup = self.first_cup
+        print("Done")
+            
+        
+    def three_list(self):
+        return [self.first_of_three.id, self.first_of_three.get_next().id,
+                self.first_of_three.get_next().get_next().id]
+
+    def set_three(self):
+        self.debug and print(f"Picking three - cups = {self}, current cup = {self.current_cup}")
+        self.first_of_three = self.current_cup.get_next()
+        self.last_of_three = self.first_of_three.get_next().get_next()
+        self.current_cup.set_next(self.last_of_three.get_next())
+        
+        self.last_of_three.remove_next()
+        
+        self.debug and print(f"Three = {self.three_list()}\ncups = {self}")
+    
+    def in_three(self, _id):
+        c = self.first_of_three
+        for _ in range(3):
+            if c.id == _id: return True
+            c = c.get_next()
+        return False
+    
+    def select_destination(self):
+        self.debug and print("Selecting destination")
+        dest = self.current_cup.id
+        while True:
+            dest -= 1
+            if dest == 0:
+                dest = self.num_cups
+            if not self.in_three(dest):
+                self.destination = dest
+                self.debug and print(f"Destination = {self.destination}")
+                break
+    
+    def return_three(self):
+        self.debug and print(f"Adding three after destination cup {self.destination}")
+        dest = Cups._cups_dict[self.destination]
+        after_dest = dest.get_next()
+        dest.set_next(self.first_of_three)
+        self.last_of_three.set_next(after_dest)
+    
+    def update_current(self):
+        self.debug and print("Updating current cup")
+        self.debug and print(f"Current cup was {self.current_cup}")
+        self.current_cup = self.current_cup.get_next()
+        self.debug and print(f"Current cup is now {self.current_cup}")
+    
+    
+    def run_round(self):
+        self.debug and print("=================================")
+        self.set_three()
+        self.select_destination()
+        self.return_three()
+        self.update_current()
+        self.debug and print(f"Cups now: {self}")
+
+    def __str__(self):
+        ret = []
+        c = self.first_cup
+        for _ in range(50):
+            ret.append(c.id)
+            c = c.get_next()
+        ret.append("...")
+        return str(ret)
+        
+            
+        
+def get_input(input_type):
+    if input_type == "test1":
+        ret = (np.array([3, 8, 9, 1, 2, 5, 4, 6, 7], dtype="int64"), 9)
+    elif input_type == "test2":
+        ret = (np.array([3, 8, 9, 1, 2, 5, 4, 6, 7], dtype="int64"), 1000000)
+    else:
+        ret = (np.array([9, 2, 5, 1, 7, 6, 8, 3, 4], dtype="int64"), 1000000)
+    ' Add up to a million'
+    return ret
+
+def run(input_type, debug=False, num_rounds=10000000):
+    (initial_cups, num_cups) = get_input(input_type)
+    Cups._cups_dict = {}
+    Cups._next_cup = max(initial_cups) + 1
+    cups = Cups(initial_cups, num_cups, debug)
+    if debug: return cups
+    for i in range(num_rounds):
+        cups.run_round()
+    cup_1 = Cups._cups_dict[1]
+    next_cup_1 = cup_1.get_next()
+    next_cup_2 = next_cup_1.get_next()
+    return [next_cup_1.id, next_cup_2.id]
+    
